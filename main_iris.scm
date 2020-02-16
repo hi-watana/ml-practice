@@ -1,22 +1,24 @@
 (load "./softmax-regressor.scm")
 (use text.csv)
+(use rfc.http)
 
-(define (read-csv file-name)
-  (cdr (call-with-input-file file-name
-	(cut port->list (make-csv-reader #\,) <>)
-	:encoding 'utf8)))
+(define (parse-csv csv-string)
+  (cdr (call-with-input-string csv-string
+	(cut port->list (make-csv-reader #\,) <>))))
 
-(define (load-iris file-name)
-  (let* ((table (read-csv file-name))
-         (l-rev (reverse (transpose table)))
-         (y (car l-rev))
-         (X (transpose (map (lambda (l) (map string->number l)) (reverse (cdr l-rev))))))
-    (values X y)))
+(define (load-iris)
+  (receive (status header body)
+           (http-get "raw.githubusercontent.com" "/pandas-dev/pandas/master/pandas/tests/data/iris.csv")
+           (let* ((table (parse-csv body))
+                  (l-rev (reverse (transpose table)))
+                  (y (car l-rev))
+                  (X (transpose (map (lambda (l) (map string->number l)) (reverse (cdr l-rev))))))
+             (values X y))))
 
 (define (main args)
   (receive
     (X y)
-    (load-iris "iris.csv")
+    (load-iris)
     (let* ((y-label (categorize-string-class y))
            (y-one-hot (encode-one-hot y-label))
            (X-normalized (normalize-features X))
