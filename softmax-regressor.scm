@@ -43,13 +43,13 @@
     (receive (X-test y-test X-train y-train) (apply values (apply append (map (lambda (l) (transpose l)) l2)))
              (values X-train y-train X-test y-test))))
 
-(define (eye n)
+(define (unit-vector n i)
   (define (boolean->integer b)
     (if b 1 0))
-  (let ((zero-to-n-1 (iota n 0)))
-    (map (lambda (i l) (map (lambda (x) (boolean->integer (eq? x i))) l))
-         zero-to-n-1
-         (map (lambda (x) zero-to-n-1) zero-to-n-1))))
+  (map (lambda (x) (boolean->integer (eq? x i))) (iota n)))
+
+(define (eye n)
+  (map (lambda (i) (unit-vector n i)) (iota n)))
 
 (define (encode-one-hot X)
   (define (create-category-list X)
@@ -76,6 +76,18 @@
 (define (sub-matrix A B)
   (add-matrix A (multiply-scalar-matrix -1 B)))
 
+(define (argmax l)
+  (define (argmax-i l M i a)
+    (if (null? l)
+      a
+      (let ((car-l (car l))
+            (cdr-l (cdr l))
+            (i+1 (+ 1 i)))
+        (if (< M car-l)
+          (argmax-i cdr-l car-l i+1 i)
+          (argmax-i cdr-l M i+1 a)))))
+  (argmax-i (cdr l) (car l) 1 0))
+
 (define (create-SGD n-input n-output :key eta [eta 0.1] var [var 0.1] alpha [alpha 0.1])
   (let* ((theta (let ((randn (reals-normal$ 0 var)))
                   (map (lambda (x) (map (lambda (x) (randn)) (iota n-input))) (iota n-output))))
@@ -83,6 +95,8 @@
          (get-alpha (lambda () alpha))
          (set-theta! (lambda (new-theta) (set! theta new-theta)))
          (predict-proba (lambda (X) (map softmax (dot X (transpose theta)))))
+         (predict (lambda (X)
+                    (map (lambda (x) (unit-vector (length x) (argmax x))) (predict-proba X))))
          (fit (lambda (X y)
                 (let* ((m (length X))
                        (p-hat (predict-proba X))
@@ -90,6 +104,7 @@
                        (grads (add-matrix (multiply-scalar-matrix (/ 1 m) (dot (transpose p-y) X)) (multiply-scalar-matrix alpha (map (lambda (l) (cons 0 (cdr l))) theta)))))
                   (set! theta (sub-matrix theta (multiply-scalar-matrix eta grads))))))
          (method-list (list (cons 'predict-proba predict-proba)
+                            (cons 'predict predict)
                             (cons 'fit fit)
                             (cons 'get-alpha get-alpha)
                             (cons 'get-theta get-theta)

@@ -56,7 +56,7 @@
                  (val-error (+ (cross-entropy-error p-val-predict y-val) l2-loss)))
             (print "Best epoch: " best-epoch ", Train loss: " train-error ", Validation loss: " val-error)))
         (print "----------------------------")
-        (let* ((p-test-predict ((best-model 'predict-proba) X-test))
-               (test-error (cross-entropy-error p-test-predict y-test)))
-          (print "Test loss: " test-error))))) 0)
-
+        (let* ((y-test-predict ((best-model 'predict) X-test))
+               (num-true (length (filter (lambda (x) x) (map equal? y-test-predict y-test))))
+               (accuracy (exact->inexact (/ num-true (length y-test)))))
+          (print "Accuracy (test): " accuracy))))) 0)
