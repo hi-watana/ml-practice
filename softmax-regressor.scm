@@ -1,6 +1,7 @@
 (use gauche.collection)
 (use data.random)
-(use scheme.list)
+;;(use scheme.list)
+(use srfi-1)
 
 (define (transpose X)
   (apply zip X))
