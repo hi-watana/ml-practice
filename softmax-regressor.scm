@@ -2,6 +2,7 @@
 (use data.random)
 ;;(use scheme.list)
 (use srfi-1)
+(use gauche.sequence)
 
 (define (transpose X)
   (apply zip X))
@@ -114,3 +115,22 @@
 (define (cross-entropy-error y-hat y)
   (let ((m (length y)))
     (- (/ (apply + (map (lambda (a b) (apply + (map * a b))) y (map (lambda (l) (map (lambda (x) (log (+ x 1e-7))) l)) y-hat))) m))))
+
+
+(define (create-mini-batch-SGD model batch-size)
+  (let* ((get-base-model (lambda () model))
+         (fit (lambda (X y)
+                (let ((Xy-shuffled (shuffle (zip X y))))
+                  (receive
+                    (X-shuffled y-shuffled)
+                    (apply values (transpose Xy-shuffled))
+                    (for-each (model 'fit) (slices X-shuffled batch-size) (slices y-shuffled batch-size))
+                    ))))
+         (predict-proba (model 'predict-proba))
+         (predict (model 'predict))
+         (method-list (list (cons 'predict-proba predict-proba)
+                            (cons 'predict predict)
+                            (cons 'fit fit)
+                            (cons 'get-base-model get-base-model))))
+    (lambda (method)
+      (cdr (assq method method-list)))))
