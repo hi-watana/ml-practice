@@ -1,1 +1,1 @@
-# softmax-regression
+# ml-practice
